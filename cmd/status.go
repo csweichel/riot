@@ -22,8 +22,6 @@ package cmd
 
 import (
 	"log"
-	"net"
-	"time"
 
 	"github.com/32leaves/riot/pkg/projectlib"
 	"github.com/gosuri/uiprogress"
@@ -57,7 +55,7 @@ var statusCmd = &cobra.Command{
 		hostAvailability := make([]bool, len(env.GetNodes()))
 		for idx, node := range env.GetNodes() {
 			bar.Incr()
-			hostAvailability[idx] = isHostReachable(node.Host)
+			hostAvailability[idx] = node.IsAvailable()
 		}
 
 		apps, err := env.GetApplications()
@@ -78,7 +76,7 @@ var statusCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 			for _, node := range hosts {
-				applicationAvailability[idx][node.Name] = isHostReachable(node.Host)
+				applicationAvailability[idx][node.Name] = app.IsDeployedOn(node)
 			}
 		}
 		uiprogress.Stop()
@@ -105,11 +103,6 @@ var statusCmd = &cobra.Command{
 			log.Println(statement)
 		}
 	},
-}
-
-func isHostReachable(hostname string) bool {
-	_, err := net.DialTimeout("tcp", hostname+":2376", time.Duration(1)*time.Second)
-	return err == nil
 }
 
 func init() {

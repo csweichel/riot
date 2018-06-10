@@ -103,3 +103,9 @@ func (app *Application) SelectDeploymentTargets(env Environment) ([]Node, error)
 
 	return result, nil
 }
+
+// IsDeployedOn checks if an application is currently deployed on a node
+func (app *Application) IsDeployedOn(node Node) bool {
+	// TODO: implement me
+	return false
+}

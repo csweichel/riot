@@ -22,9 +22,11 @@ package projectlib
 
 import (
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -92,4 +94,10 @@ func LoadEnv(basedir string) (Environment, error) {
 	}
 
 	return &result, nil
+}
+
+// IsAvailable checks if a node is available for container deployment
+func (node *Node) IsAvailable() bool {
+	_, err := net.DialTimeout("tcp", node.Host+":2376", time.Duration(1)*time.Second)
+	return err == nil
 }
