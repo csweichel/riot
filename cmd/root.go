@@ -29,11 +29,8 @@ var rootDir string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "riot",
-	Short: "riot is a Docker-based application deployment for smart riots",
-	Long: `The riot Object Model Environment is a one-stop application for building,
-deploying and investigating smart-riot application ecologies. Built around the
-riot Object Model (HOM), one can specify which devices are available, and deploy
-pre-built application containers to them.`,
+	Short: "As simple-as-they-come docker orchestrator targeting IoT and the Raspberry Pi.",
+	Long: ``,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
