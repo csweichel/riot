@@ -21,8 +21,12 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
+	"net"
+	"time"
 
+	"github.com/32leaves/riot/pkg/projectlib"
+	"github.com/gosuri/uiprogress"
 	"github.com/spf13/cobra"
 )
 
@@ -32,8 +36,80 @@ var statusCmd = &cobra.Command{
 	Short: "Displays the status of all applications and their deployment",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("status called")
+		basedir, err := rootCmd.PersistentFlags().GetString("project")
+		if err != nil {
+			log.Fatal(err)
+			basedir = "."
+		}
+
+		env, err := projectlib.LoadEnv(basedir)
+		if err != nil {
+			log.Fatal("Error while loading environment from ", basedir, "\n", err)
+			return
+		}
+
+		nodes := env.GetNodes()
+		uiprogress.Start()
+		bar := uiprogress.AddBar(len(nodes)).AppendCompleted().PrependElapsed()
+		bar.PrependFunc(func(b *uiprogress.Bar) string {
+			return nodes[b.Current()-1].Name
+		})
+		hostAvailability := make([]bool, len(env.GetNodes()))
+		for idx, node := range env.GetNodes() {
+			bar.Incr()
+			hostAvailability[idx] = isHostReachable(node.Host)
+		}
+
+		apps, err := env.GetApplications()
+		if err != nil {
+			log.Fatal(err)
+		}
+		bar = uiprogress.AddBar(len(apps)).AppendCompleted().PrependElapsed()
+		bar.PrependFunc(func(b *uiprogress.Bar) string {
+			return apps[b.Current()-1].Name
+		})
+		applicationAvailability := make([]map[string]bool, len(apps))
+		for idx, app := range apps {
+			bar.Incr()
+
+			applicationAvailability[idx] = make(map[string]bool)
+			hosts, err := app.SelectDeploymentTargets(env)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, node := range hosts {
+				applicationAvailability[idx][node.Name] = isHostReachable(node.Host)
+			}
+		}
+		uiprogress.Stop()
+
+		for idx, node := range env.GetNodes() {
+			var status string
+			if hostAvailability[idx] {
+				status = "up"
+			} else {
+				status = "down"
+			}
+			log.Printf("Host %s (node %s) is %s\n", node.Host, node.Name, status)
+		}
+		for idx, app := range apps {
+			statement := app.Name + ":"
+			for hn, status := range applicationAvailability[idx] {
+				if status {
+					statement += " +"
+				} else {
+					statement += " -"
+				}
+				statement += hn
+			}
+			log.Println(statement)
+		}
 	},
+}
+
+func isHostReachable(hostname string) bool {
+	_, err := net.DialTimeout("tcp", hostname+":2376", time.Duration(1)*time.Second)
+	return err == nil
 }
 
 func init() {

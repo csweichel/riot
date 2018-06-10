@@ -21,7 +21,7 @@
 package cmd
 
 import (
-	"github.com/32leaves/riot/pkg/prjlayout"
+	"github.com/32leaves/riot/pkg/projectlib"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ var initCmd = &cobra.Command{
 			basedir = "."
 		}
 
-		err = prjlayout.CreateProject(basedir)
+		err = projectlib.CreateProject(basedir)
 		if err != nil {
 			glog.Error("Error while initializing riot project: ", err)
 		} else {

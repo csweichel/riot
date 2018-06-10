@@ -14,8 +14,12 @@
 
 package main
 
-import "github.com/32leaves/riot/cmd"
+import (
+	"github.com/32leaves/riot/cmd"
+	"github.com/golang/glog"
+)
 
 func main() {
 	cmd.Execute()
+	defer glog.Flush()
 }
