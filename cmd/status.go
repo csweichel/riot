@@ -24,6 +24,7 @@ import (
 	"log"
 
 	"github.com/32leaves/riot/pkg/projectlib"
+	"github.com/fatih/color"
 	"github.com/gosuri/uiprogress"
 	"github.com/spf13/cobra"
 )
@@ -81,12 +82,14 @@ var statusCmd = &cobra.Command{
 		}
 		uiprogress.Stop()
 
+		downColor := color.New(color.Bold, color.FgRed).SprintFunc()
+		upColor := color.New(color.FgGreen).SprintFunc()
 		for idx, node := range env.GetNodes() {
 			var status string
 			if hostAvailability[idx] {
-				status = "up"
+				status = upColor("up")
 			} else {
-				status = "down"
+				status = downColor("down")
 			}
 			log.Printf("Host %s (node %s) is %s\n", node.Host, node.Name, status)
 		}
@@ -94,11 +97,10 @@ var statusCmd = &cobra.Command{
 			statement := app.Name + ":"
 			for hn, status := range applicationAvailability[idx] {
 				if status {
-					statement += " +"
+					statement += upColor(" +" + hn)
 				} else {
-					statement += " -"
+					statement += downColor(" -" + hn)
 				}
-				statement += hn
 			}
 			log.Println(statement)
 		}
