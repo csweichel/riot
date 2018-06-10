@@ -47,8 +47,13 @@ var statusCmd = &cobra.Command{
 			return
 		}
 
+		showbar, _ := cmd.Flags().GetBool("progress-bar")
+		if showbar {
+			uiprogress.Start()
+		}
+
 		nodes := env.GetNodes()
-		uiprogress.Start()
+
 		bar := uiprogress.AddBar(len(nodes)).AppendCompleted().PrependElapsed()
 		bar.PrependFunc(func(b *uiprogress.Bar) string {
 			return nodes[b.Current()-1].Name
@@ -80,7 +85,10 @@ var statusCmd = &cobra.Command{
 				applicationAvailability[idx][node.Name] = app.IsDeployedOn(node)
 			}
 		}
-		uiprogress.Stop()
+
+		if showbar {
+			uiprogress.Stop()
+		}
 
 		downColor := color.New(color.Bold, color.FgRed).SprintFunc()
 		upColor := color.New(color.FgGreen).SprintFunc()
@@ -118,5 +126,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// statusCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	statusCmd.Flags().BoolP("progress-bar", "p", false, "Show a progress bar while computing status")
 }
