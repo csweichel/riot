@@ -35,6 +35,7 @@ import (
 type Environment interface {
 	GetNodes() []Node
 	GetApplications() ([]Application, error)
+	Validate() ([]Issue, error)
 }
 
 type environment struct {

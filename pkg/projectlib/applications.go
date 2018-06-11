@@ -33,10 +33,11 @@ import (
 // Application represnts a single app in a riot project
 type Application struct {
 	Name               string
-	DeploymentSelector []string `yaml:"deploysTo"`
-	Image              string   `yaml:"image"`
-	BuildArgs          []string `yaml:"buildArgs"`
-	RunArgs            []string `yaml:"runArgs"`
+	DeploymentSelector []string          `yaml:"deploysTo"`
+	Image              string            `yaml:"image"`
+	BuildArgs          []string          `yaml:"buildArgs"`
+	RunArgs            []string          `yaml:"runArgs"`
+	Ports              map[string]string `yaml:"ports"`
 }
 
 // LoadApp loads the application manifest from an application folder
