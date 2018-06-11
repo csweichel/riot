@@ -61,7 +61,7 @@ func CreateProject(basedir string) error {
 	err = ioutil.WriteFile(path.Join(basedir, "applications", "with-build", "Dockerfile"), []byte(`
 FROM alpine
 CMD ["echo", "hello"]
-	`), 0644)
+    `), 0644)
 	if err != nil {
 		return err
 	}
