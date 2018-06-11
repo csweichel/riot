@@ -21,8 +21,9 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
 
+	"github.com/32leaves/riot/pkg/projectlib"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,42 @@ var buildCmd = &cobra.Command{
 pushes them to the main registry. After a successful build one can
 deploy either the latest images (the last build) or a previous build.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("build called")
+		basedir, err := rootCmd.PersistentFlags().GetString("project")
+		if err != nil {
+			log.Fatal(err)
+			basedir = "."
+		}
+
+		env, err := projectlib.LoadEnv(basedir)
+		if err != nil {
+			log.Fatal("Error while loading environment from ", basedir, "\n", err)
+			return
+		}
+
+		apps, err := env.GetApplications()
+		if err != nil {
+			log.Fatal("Error while loading application descriptions", err)
+			return
+		}
+
+		appToImage := make(map[string]string)
+		for _, app := range apps {
+			log.Printf("Building %s\n", app.Name)
+			iamgeName, err := app.Build(env)
+			if err != nil {
+				log.Fatalf("Error while building %s\n%s", app.Name, err)
+				return
+			}
+
+			appToImage[app.Name] = iamgeName
+		}
+
+		lock := projectlib.RiotLock{Versions: appToImage}
+		err = lock.Save(basedir)
+		if err != nil {
+			log.Fatal("Error while saving yarn lock: ", err)
+			return
+		}
 	},
 }
 

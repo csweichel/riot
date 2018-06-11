@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -34,10 +33,15 @@ import (
 type Application struct {
 	Name               string
 	DeploymentSelector []string          `yaml:"deploysTo"`
+	BuildCfg           AppBuild          `yaml:"build"`
 	Image              string            `yaml:"image"`
-	BuildArgs          []string          `yaml:"buildArgs"`
 	RunArgs            []string          `yaml:"runArgs"`
 	Ports              map[string]string `yaml:"ports"`
+}
+
+// AppBuild contains all settings related to an application build
+type AppBuild struct {
+	NodeSelector string `yaml:"buildsOn"`
 }
 
 // LoadApp loads the application manifest from an application folder
@@ -66,40 +70,23 @@ func LoadApp(basedir string) (*Application, error) {
 
 // SelectDeploymentTargets selects all nodes in an environment to which an application ought to be deployed
 func (app *Application) SelectDeploymentTargets(env Environment) ([]Node, error) {
-	var result []Node
-	for _, c := range env.GetNodes() {
-		nodeSelected := false
-		for _, selector := range app.DeploymentSelector {
-			if strings.HasPrefix(selector, "#") {
-				// id selector
-				if c.Name == strings.TrimPrefix(selector, "#") {
-					result = append(result, c)
-					nodeSelected = true
-					break
-				}
-			} else if strings.HasPrefix(selector, ".") {
-				selector := strings.TrimPrefix(selector, ".")
-				labelFound := false
-				for _, label := range c.Labels {
-					if label == selector {
-						labelFound = true
-						break
-					}
-				}
-
-				if labelFound {
-					result = append(result, c)
-					nodeSelected = true
-					break
-				}
-			} else {
-				return nil, fmt.Errorf("Invalid selector \"%s\". Must start with . or #", selector)
-			}
+	selectedNodes := make(map[string]Node)
+	for _, selector := range app.DeploymentSelector {
+		nodes, err := env.SelectNodes(selector)
+		if err != nil {
+			return nil, err
+		} else if len(nodes) == 0 {
+			return nil, fmt.Errorf("Selector \"%s\" did not match a node", selector)
 		}
 
-		if nodeSelected {
-			break
+		for _, node := range nodes {
+			selectedNodes[node.Name] = node
 		}
+	}
+
+	result := make([]Node, 0)
+	for _, c := range selectedNodes {
+		result = append(result, c)
 	}
 
 	return result, nil
@@ -109,4 +96,25 @@ func (app *Application) SelectDeploymentTargets(env Environment) ([]Node, error)
 func (app *Application) IsDeployedOn(node Node) bool {
 	// TODO: implement me
 	return false
+}
+
+// GetBuildNode returns the node on which we should build the application image
+func (app *Application) GetBuildNode(env Environment) (Node, error) {
+	if len(app.BuildCfg.NodeSelector) > 0 {
+		nodes, err := env.SelectNodes(app.BuildCfg.NodeSelector)
+		if err != nil {
+			return Node{}, err
+		} else if len(nodes) == 0 {
+			return Node{}, fmt.Errorf("Selector \"%s\" did not match a node", app.BuildCfg.NodeSelector)
+		}
+
+		return nodes[0], nil
+	}
+
+	nodes, err := app.SelectDeploymentTargets(env)
+	if err != nil {
+		return Node{}, err
+	}
+
+	return nodes[0], nil
 }

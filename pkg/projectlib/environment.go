@@ -21,11 +21,13 @@
 package projectlib
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -36,6 +38,8 @@ type Environment interface {
 	GetNodes() []Node
 	GetApplications() ([]Application, error)
 	Validate() ([]Issue, error)
+	GetBaseDir() string
+	SelectNodes(selector string) ([]Node, error)
 }
 
 type environment struct {
@@ -53,6 +57,10 @@ type Node struct {
 // Nodes returns all nodes configured in an environment
 func (env *environment) GetNodes() []Node {
 	return env.Nodes
+}
+
+func (env *environment) GetBaseDir() string {
+	return env.basedir
 }
 
 func (env *environment) GetApplications() ([]Application, error) {
@@ -101,4 +109,33 @@ func LoadEnv(basedir string) (Environment, error) {
 func (node *Node) IsAvailable() bool {
 	_, err := net.DialTimeout("tcp", node.Host+":2376", time.Duration(1)*time.Second)
 	return err == nil
+}
+
+func (env *environment) SelectNodes(selector string) ([]Node, error) {
+	result := make([]Node, 0)
+	for _, c := range env.Nodes {
+		if strings.HasPrefix(selector, "#") {
+			// id selector
+			if c.Name == strings.TrimPrefix(selector, "#") {
+				result = append(result, c)
+				return result, nil
+			}
+		} else if strings.HasPrefix(selector, ".") {
+			selector := strings.TrimPrefix(selector, ".")
+			labelFound := false
+			for _, label := range c.Labels {
+				if label == selector {
+					labelFound = true
+					break
+				}
+			}
+
+			if labelFound {
+				result = append(result, c)
+			}
+		} else {
+			return nil, fmt.Errorf("Invalid selector \"%s\". Must start with . or #", selector)
+		}
+	}
+	return result, nil
 }
