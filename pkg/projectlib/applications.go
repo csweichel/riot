@@ -21,11 +21,14 @@
 package projectlib
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -99,10 +102,26 @@ func (app *Application) SelectDeploymentTargets(env Environment) ([]Node, error)
 	return result, nil
 }
 
-// IsDeployedOn checks if an application is currently deployed on a node
-func (app *Application) IsDeployedOn(node Node) bool {
-	// TODO: implement me
-	return false
+// HasAppRunning checks if an application is currently deployed on a node
+func (node Node) HasAppRunning(imageName string, env Environment) (bool, error) {
+	ctx := context.Background()
+	client, err := node.GetDockerClient(ctx, env)
+	if err != nil {
+		return false, err
+	}
+
+	filters := filters.NewArgs()
+	filters.Add("label", imageName)
+	options := types.ContainerListOptions{
+		All:     true,
+		Filters: filters,
+	}
+	containers, err := client.ContainerList(ctx, options)
+	if err != nil {
+		return false, err
+	}
+
+	return len(containers) > 0, nil
 }
 
 // GetBuildNode returns the node on which we should build the application image

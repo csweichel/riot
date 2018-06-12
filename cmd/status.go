@@ -67,7 +67,14 @@ var statusCmd = &cobra.Command{
 		apps, err := env.GetApplications()
 		if err != nil {
 			log.Fatal(err)
+			return
 		}
+		lock, err := projectlib.LoadLock(env.GetBaseDir())
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		bar = uiprogress.AddBar(len(apps)).AppendCompleted().PrependElapsed()
 		bar.PrependFunc(func(b *uiprogress.Bar) string {
 			return apps[b.Current()-1].Name
@@ -82,7 +89,16 @@ var statusCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 			for _, node := range hosts {
-				applicationAvailability[idx][node.Name] = app.IsDeployedOn(node)
+				imageName, ok := lock.Versions[app.Name]
+				if !ok {
+					log.Fatalf("Application %s does not have a corrensopning riot.lock entry. Please run 'riot build'.", app.Name)
+					return
+				}
+				applicationAvailability[idx][node.Name], err = node.HasAppRunning(imageName, env)
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
 			}
 		}
 

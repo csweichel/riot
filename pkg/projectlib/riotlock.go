@@ -43,3 +43,25 @@ func (lock RiotLock) Save(basedir string) error {
 	err = ioutil.WriteFile(path.Join(basedir, "riot.lock"), data, os.ModePerm)
 	return err
 }
+
+// LoadLock loads a riot.lock file for a project
+func LoadLock(basedir string) (RiotLock, error) {
+	fn := path.Join(basedir, "riot.lock")
+	_, err := os.Stat(fn)
+	if os.IsNotExist(err) {
+		return RiotLock{}, err
+	}
+
+	yamlFile, err := ioutil.ReadFile(fn)
+	if err != nil {
+		return RiotLock{}, err
+	}
+
+	var result RiotLock
+	err = yaml.Unmarshal(yamlFile, &result)
+	if err != nil {
+		return RiotLock{}, err
+	}
+
+	return result, nil
+}
