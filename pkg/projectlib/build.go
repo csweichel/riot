@@ -22,6 +22,7 @@ package projectlib
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/mholt/archiver"
+	"github.com/rs/xid"
 )
 
 // Build builds the image of an application or returns the preconfigured one if there is no Dockerfile
@@ -71,6 +73,10 @@ func (app *Application) Build(env Environment) (string, error) {
 	}
 	log.Printf("Built build-context at %s", tarfile.Name())
 
+	imageVersion := xid.New().String()
+	imageName := env.GetRegistry().Host + "/" + app.Name + ":" + imageVersion
+	log.Printf("Building image %s\n", imageName)
+
 	dockerBuildContext, err := os.Open(tarfile.Name())
 	defer dockerBuildContext.Close()
 	options := types.ImageBuildOptions{
@@ -78,17 +84,31 @@ func (app *Application) Build(env Environment) (string, error) {
 		Remove:         true,
 		ForceRemove:    true,
 		PullParent:     true,
+		BuildArgs:      app.BuildCfg.Args,
+		Tags:           []string{imageName},
 	}
-	buildResponse, err := client.ImageBuild(context.Background(), dockerBuildContext, options)
+	buildResponse, err := client.ImageBuild(ctx, dockerBuildContext, options)
 	if err != nil {
 		return "", err
 	}
-	response, err := ioutil.ReadAll(buildResponse.Body)
-	if err != nil {
-		return "", err
+	defer buildResponse.Body.Close()
+	io.Copy(os.Stdout, buildResponse.Body)
+
+	if !app.BuildCfg.DontPush {
+		authString, err := env.GetRegistry().GetAuthString()
+		if err != nil {
+			return "", err
+		}
+		pushOptions := types.ImagePushOptions{
+			RegistryAuth: authString,
+		}
+		pushResponse, err := client.ImagePush(ctx, imageName, pushOptions)
+		if err != nil {
+			return "", err
+		}
+		defer pushResponse.Close()
+		io.Copy(os.Stdout, pushResponse)
 	}
 
-	// TODO: improve response handling (logging, returning the image name)
-	// TODO: push to registry
-	return string(response[:]), nil
+	return imageName, nil
 }

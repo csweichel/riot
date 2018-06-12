@@ -39,7 +39,9 @@ func CreateProject(basedir string) error {
 		return fmt.Errorf("Project path exists but is not a directory: %s", basedir)
 	}
 
-	err = ioutil.WriteFile(path.Join(basedir, "environment.yaml"), []byte(`nodes:
+	err = ioutil.WriteFile(path.Join(basedir, "environment.yaml"), []byte(`registry:
+  host: the-registry.local
+nodes:
 - name: myFirstNode
   host: my-first-node.local
   labels:
@@ -67,10 +69,15 @@ CMD ["echo", "hello"]
 	}
 	err = ioutil.WriteFile(path.Join(basedir, "applications", "with-build", "application.yaml"), []byte(`deploysTo:
   - ".ble"
-buildArgs:
-# - "-dockerBuildArgGoesHere"
-runArgs:
-# - "-dockerRunArgGoesHere"`), 0644)
+build:
+  buildsOn: ".ble"
+  args:
+    foo: bar
+run:
+  ports:
+    8080: 8080
+  volumes:
+    /tmp/wbtmp: /tmp`), 0644)
 	if err != nil {
 		return err
 	}
@@ -81,9 +88,7 @@ runArgs:
 	}
 	err = ioutil.WriteFile(path.Join(basedir, "applications", "without-build", "application.yaml"), []byte(`deploysTo:
   - "#myFirstNode"
-image: alpine:3.7
-runArgs:
-# - "-dockerRunArgGoesHere"`), 0644)
+image: alpine:3.7`), 0644)
 	if err != nil {
 		return err
 	}

@@ -32,16 +32,23 @@ import (
 // Application represnts a single app in a riot project
 type Application struct {
 	Name               string
-	DeploymentSelector []string          `yaml:"deploysTo"`
-	BuildCfg           AppBuild          `yaml:"build"`
-	Image              string            `yaml:"image"`
-	RunArgs            []string          `yaml:"runArgs"`
-	Ports              map[string]string `yaml:"ports"`
+	DeploymentSelector []string `yaml:"deploysTo"`
+	BuildCfg           AppBuild `yaml:"build"`
+	Image              string   `yaml:"image"`
+	RunCfg             AppRun   `yaml:"run"`
 }
 
 // AppBuild contains all settings related to an application build
 type AppBuild struct {
-	NodeSelector string `yaml:"buildsOn"`
+	NodeSelector string             `yaml:"buildsOn"`
+	Args         map[string]*string `yaml:"args"`
+	DontPush     bool               `yaml:"dontPush"`
+}
+
+// AppRun configures an application during runtime
+type AppRun struct {
+	Volumes map[string]string `yaml:"volumes"`
+	Ports   map[string]string `yaml:"ports"`
 }
 
 // LoadApp loads the application manifest from an application folder

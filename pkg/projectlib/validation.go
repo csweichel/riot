@@ -42,20 +42,32 @@ func (issue Issue) String() string {
 func (env *environment) Validate() ([]Issue, error) {
 	result := make([]Issue, 0)
 
+	issue, err := env.validateRegistry()
+	if err != nil {
+		return nil, err
+	}
+	result = append(result, issue...)
+
 	issues, err := env.validateNodeNames()
 	if err != nil {
 		return nil, err
-	} else {
-		result = append(result, issues...)
 	}
+	result = append(result, issues...)
 
 	issues, err = env.validateNodePorts()
 	if err != nil {
 		return nil, err
-	} else {
-		result = append(result, issues...)
 	}
+	result = append(result, issues...)
 
+	return result, nil
+}
+
+func (env *environment) validateRegistry() ([]Issue, error) {
+	result := make([]Issue, 0)
+	if env.GetRegistry().Host == "" {
+		result = append(result, Issue{Description: "Docker registry host must not be an empty string", IsFatal: true})
+	}
 	return result, nil
 }
 
@@ -94,7 +106,7 @@ func (env *environment) validateNodePorts() ([]Issue, error) {
 	for nodeName, apps := range nodeAppMap {
 		portsUsed := make(map[string]string)
 		for _, app := range apps {
-			for sourcePort, targetPort := range app.Ports {
+			for sourcePort, targetPort := range app.RunCfg.Ports {
 				if nr, err := strconv.Atoi(sourcePort); err != nil || nr < 0 || nr > 65535 {
 					result = append(result, Issue{
 						Description: fmt.Sprintf("Source port %s on application %s is not a valid port number", targetPort, app.Name),

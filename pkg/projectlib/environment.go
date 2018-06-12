@@ -21,6 +21,8 @@
 package projectlib
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -30,11 +32,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"gopkg.in/yaml.v2"
 )
 
 // Environment is the core configuration of a riot project
 type Environment interface {
+	GetRegistry() RegistryCfg
 	GetNodes() []Node
 	GetApplications() ([]Application, error)
 	Validate() ([]Issue, error)
@@ -43,8 +47,16 @@ type Environment interface {
 }
 
 type environment struct {
-	basedir string
-	Nodes   []Node `yaml:"nodes"`
+	basedir  string
+	Registry RegistryCfg `yaml:"registry"`
+	Nodes    []Node      `yaml:"nodes"`
+}
+
+// RegistryCfg configures access to a docker registry
+type RegistryCfg struct {
+	Host     string `yaml:"host"`
+	Username string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 // Node represents a single device on which we can deploy an application to
@@ -52,6 +64,25 @@ type Node struct {
 	Name   string   `yaml:"name"`
 	Host   string   `yaml:"host"`
 	Labels []string `yaml:"labels"`
+}
+
+// GetAuthString computes the base64 authorization string needed for docker registry requests
+func (reg RegistryCfg) GetAuthString() (string, error) {
+	auth := types.AuthConfig{
+		Username: reg.Username,
+		Password: reg.Password,
+	}
+	authBytes, err := json.Marshal(auth)
+	if err != nil {
+		return "", err
+	}
+
+	authBase64 := base64.URLEncoding.EncodeToString(authBytes)
+	return authBase64, nil
+}
+
+func (env *environment) GetRegistry() RegistryCfg {
+	return env.Registry
 }
 
 // Nodes returns all nodes configured in an environment
