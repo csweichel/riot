@@ -32,15 +32,10 @@ var initCmd = &cobra.Command{
 	Short: "Initializes this directory as a riot project",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		basedir, err := rootCmd.PersistentFlags().GetString("project")
+		basedir := getBaseDir(cmd)
+		err := projectlib.CreateProject(basedir)
 		if err != nil {
-			glog.Error(err)
-			basedir = "."
-		}
-
-		err = projectlib.CreateProject(basedir)
-		if err != nil {
-			glog.Error("Error while initializing riot project: ", err)
+			glog.Error("Error while initializing riot project in ", basedir, ": ", err)
 		} else {
 			glog.Info("Successfully initialized riot project in ", basedir)
 		}
@@ -59,4 +54,12 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// initCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func getBaseDir(cmd *cobra.Command) string {
+	basedir, err := rootCmd.PersistentFlags().GetString("project")
+	if err != nil || basedir == "" {
+		basedir = "."
+	}
+	return basedir
 }

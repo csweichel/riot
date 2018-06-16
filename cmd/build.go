@@ -35,11 +35,7 @@ var buildCmd = &cobra.Command{
 pushes them to the main registry. After a successful build one can
 deploy either the latest images (the last build) or a previous build.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		basedir, err := rootCmd.PersistentFlags().GetString("project")
-		if err != nil {
-			log.Fatal(err)
-			basedir = "."
-		}
+		basedir := getBaseDir(cmd)
 
 		env, err := projectlib.LoadEnv(basedir)
 		if err != nil {

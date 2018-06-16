@@ -35,11 +35,7 @@ var statusCmd = &cobra.Command{
 	Short: "Displays the status of all applications and their deployment",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		basedir, err := rootCmd.PersistentFlags().GetString("project")
-		if err != nil {
-			log.Fatal(err)
-			basedir = "."
-		}
+		basedir := getBaseDir(cmd)
 
 		env, err := projectlib.LoadEnv(basedir)
 		if err != nil {
@@ -71,7 +67,7 @@ var statusCmd = &cobra.Command{
 		}
 		lock, err := projectlib.LoadLock(env.GetBaseDir())
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(err, ". Please run riot build.")
 			return
 		}
 

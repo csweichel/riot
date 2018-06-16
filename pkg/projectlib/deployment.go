@@ -21,67 +21,55 @@
 package projectlib
 
 import (
-	"io/ioutil"
+	"context"
+	"fmt"
+	"io"
 	"os"
-	"path"
 
-	"gopkg.in/yaml.v2"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
-// RiotLock locks an application to a specific image version
-type RiotLock struct {
-	Versions   map[string]string            `yaml:"versions"`
-	Deployment map[string]map[string]string `yaml:"deployment"`
-}
-
-// Save stores a riot lock in a project
-func (lock RiotLock) Save(basedir string) error {
-	data, err := yaml.Marshal(lock)
+// Deploy installs an application on a node
+func (app *Application) Deploy(node Node, env Environment, lock RiotLock) (*RiotLock, error) {
+	ctx := context.Background()
+	client, err := node.GetDockerClient(ctx, env)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = ioutil.WriteFile(path.Join(basedir, "riot.lock"), data, os.ModePerm)
-	return err
-}
-
-// LoadLock loads a riot.lock file for a project
-func LoadLock(basedir string) (RiotLock, error) {
-	fn := path.Join(basedir, "riot.lock")
-	_, err := os.Stat(fn)
-	if os.IsNotExist(err) {
-		return RiotLock{}, err
-	}
-
-	yamlFile, err := ioutil.ReadFile(fn)
-	if err != nil {
-		return RiotLock{}, err
-	}
-
-	var result RiotLock
-	err = yaml.Unmarshal(yamlFile, &result)
-	if err != nil {
-		return RiotLock{}, err
-	}
-
-	return result, nil
-}
-
-func (lock *RiotLock) AddDeployment(app string, node string, version string) {
-	deps, ok := lock.Deployment[app]
+	imageName, ok := lock.Versions[app.Name]
 	if !ok {
-		deps = make(map[string]string)
-	}
-	deps[node] = version
-	lock.Deployment[app] = deps
-}
-
-func (lock *RiotLock) GetDeployment(app string, node string) (string, bool) {
-	deps, ok := lock.Deployment[app]
-	if !ok {
-		return "", false
+		return nil, fmt.Errorf("application %s has no riot.lock entry. Please run riot build", app.Name)
 	}
 
-	dep, ok := deps[node]
-	return dep, ok
+	out, err := client.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	if err != nil {
+		return nil, err
+	}
+	io.Copy(os.Stdout, out)
+
+	containerID, ok := lock.GetDeployment(app.Name, node.Name)
+	if ok {
+		err := client.ContainerStop(ctx, containerID, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	resp, err := client.ContainerCreate(ctx, &container.Config{
+		Image: imageName,
+	}, nil, nil, "")
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	lock.AddDeployment(app.Name, node.Name, resp.ID)
+
+	return &lock, nil
 }

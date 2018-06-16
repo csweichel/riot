@@ -22,17 +22,42 @@ package projectlib
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"os"
+	"path"
 
 	"github.com/docker/docker/client"
 )
 
 // GetDockerClient builds a Docker client for a particular node
 func (node *Node) GetDockerClient(ctx context.Context, env Environment) (*client.Client, error) {
-	// TODO: Implement me
-	cli, err := client.NewEnvClient()
+	certs := path.Join(env.GetBaseDir(), ".riot-certs", node.Name)
+	var cli *client.Client
+	var err error
+	if _, err := os.Stat(certs); os.IsNotExist(err) {
+		log.Printf("Unable to find Docker certificates for node %s. Please run riot collect", node.Name)
+		cli, err = client.NewClientWithOpts(
+			client.WithVersion("1.37"),
+			client.WithHost(node.getDockerHost()),
+		)
+	} else {
+		cli, err = client.NewClientWithOpts(
+			client.WithTLSClientConfig(
+				path.Join(certs, "ca.pem"),
+				path.Join(certs, "cert.pem"),
+				path.Join(certs, "key.pem")),
+			client.WithVersion("1.37"),
+			client.WithHost(node.getDockerHost()),
+		)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	return cli, nil
+}
+
+func (node *Node) getDockerHost() string {
+	return fmt.Sprintf("tcp://%s:2376", node.Host)
 }

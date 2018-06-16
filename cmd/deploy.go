@@ -22,7 +22,9 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/32leaves/riot/pkg/projectlib"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +34,53 @@ var deployCmd = &cobra.Command{
 	Short: "Deploys all applications of this project",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("deploy called")
+		basedir := getBaseDir(cmd)
+
+		env, err := projectlib.LoadEnv(basedir)
+		if err != nil {
+			log.Fatal("Error while loading environment from ", basedir, "\n", err)
+			return
+		}
+
+		apps, err := env.GetApplications()
+		if err != nil {
+			log.Fatal("Error while loading application descriptions", err)
+			return
+		}
+
+		lock, err := projectlib.LoadLock(env.GetBaseDir())
+		if err != nil {
+			log.Fatal(err, ". Please run riot build.")
+			return
+		}
+
+		errors := make([]error, 0)
+		for _, app := range apps {
+			hosts, err := app.SelectDeploymentTargets(env)
+			if err != nil {
+				errors = append(errors, err)
+				continue
+			}
+
+			for _, host := range hosts {
+				plock, err := app.Deploy(host, env, lock)
+
+				if err != nil {
+					errors = append(errors, err)
+				} else {
+					lock = *plock
+					lock.Save(basedir)
+				}
+			}
+		}
+
+		if len(errors) > 0 {
+			errorMessages := ""
+			for _, err := range errors {
+				errorMessages += fmt.Sprintf("%s\n", err)
+			}
+			log.Fatalf("Error while deploying project: %s", errorMessages)
+		}
 	},
 }
 

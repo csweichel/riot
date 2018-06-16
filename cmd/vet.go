@@ -34,11 +34,7 @@ var vetCmd = &cobra.Command{
 	Short: "Validates a riot project",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		basedir, err := rootCmd.PersistentFlags().GetString("project")
-		if err != nil {
-			log.Fatal(err)
-			basedir = "."
-		}
+		basedir := getBaseDir(cmd)
 
 		env, err := projectlib.LoadEnv(basedir)
 		if err != nil {
