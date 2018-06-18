@@ -45,13 +45,13 @@ deploy either the latest images (the last build) or a previous build.`,
 
 		apps, err := env.GetApplications()
 		if err != nil {
-			log.Fatal("Error while loading application descriptions", err)
+			log.Fatal("Error while loading application descriptions: ", err)
 			return
 		}
 
 		appToImage := make(map[string]string)
 		for _, app := range apps {
-			log.Printf("Building %s\n", app.Name)
+			log.Printf("Building: %s\n", app.Name)
 			iamgeName, err := app.Build(env)
 			if err != nil {
 				log.Fatalf("Error while building %s\n%s", app.Name, err)

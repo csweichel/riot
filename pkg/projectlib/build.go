@@ -22,11 +22,12 @@ package projectlib
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/mholt/archiver"
@@ -35,10 +36,12 @@ import (
 
 // Build builds the image of an application or returns the preconfigured one if there is no Dockerfile
 func (app *Application) Build(env Environment) (string, error) {
-	appBasedir := path.Join(env.GetBaseDir(), "applications", app.Name)
-	log.Printf("Building application in %s", appBasedir)
-	dockerfilePath := path.Join(appBasedir, "Dockerfile")
+	appBasedir := filepath.Join(env.GetBaseDir(), "applications", app.Name)
+	dockerfilePath := filepath.Join(appBasedir, "Dockerfile")
 	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+		if app.Image == "" {
+			return "", fmt.Errorf("Application %s has neither a Dockerfile nor an image", app.Name)
+		}
 		return app.Image, nil
 	}
 
@@ -60,7 +63,7 @@ func (app *Application) Build(env Environment) (string, error) {
 	filelist := make([]string, 0)
 	for _, fi := range fileinfo {
 		if fi.Name() != "." && fi.Name() != ".." {
-			filelist = append(filelist, path.Join(appBasedir, fi.Name()))
+			filelist = append(filelist, filepath.Join(appBasedir, fi.Name()))
 		}
 	}
 	tarfile, err := ioutil.TempFile("", "riot-build")
@@ -86,6 +89,7 @@ func (app *Application) Build(env Environment) (string, error) {
 		PullParent:     true,
 		BuildArgs:      app.BuildCfg.Args,
 		Tags:           []string{imageName},
+		NoCache:        true,
 	}
 	buildResponse, err := client.ImageBuild(ctx, dockerBuildContext, options)
 	if err != nil {

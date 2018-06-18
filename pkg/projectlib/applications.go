@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -59,7 +60,7 @@ func LoadApp(basedir string) (*Application, error) {
 	fn := path.Join(basedir, "application.yaml")
 	_, err := os.Stat(fn)
 	if os.IsNotExist(err) {
-		return nil, err
+		return nil, fmt.Errorf("did not find application manifest at %s", fn)
 	}
 
 	yamlFile, err := ioutil.ReadFile(fn)
@@ -73,7 +74,7 @@ func LoadApp(basedir string) (*Application, error) {
 		return nil, err
 	}
 
-	result.Name = path.Base(basedir)
+	result.Name = filepath.Base(basedir)
 
 	return &result, nil
 }

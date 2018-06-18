@@ -25,9 +25,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -95,14 +95,15 @@ func (env *environment) GetBaseDir() string {
 }
 
 func (env *environment) GetApplications() ([]Application, error) {
-	matches, err := filepath.Glob(path.Join(env.basedir, "applications", "*", "application.yaml"))
+	matches, err := filepath.Glob(filepath.Join(env.basedir, "applications", "*", "application.yaml"))
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]Application, len(matches))
 	for idx, fn := range matches {
-		appBasedir, _ := path.Split(fn)
+		appBasedir, _ := filepath.Split(fn)
+		log.Printf("Loading application %s\n", appBasedir)
 		app, err := LoadApp(appBasedir)
 		if err != nil {
 			return nil, err
@@ -115,7 +116,7 @@ func (env *environment) GetApplications() ([]Application, error) {
 
 // LoadEnv loads the environment description of a riot project from the basedir
 func LoadEnv(basedir string) (Environment, error) {
-	fn := path.Join(basedir, "environment.yaml")
+	fn := filepath.Join(basedir, "environment.yaml")
 	_, err := os.Stat(fn)
 	if os.IsNotExist(err) {
 		return nil, err
