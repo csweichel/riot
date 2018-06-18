@@ -15,22 +15,24 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 BINARY=riot
 VERSION=0.1.0
 BUILD=`git rev-parse HEAD`
-PLATFORMS=darwin linux windows
-ARCHITECTURES=386 amd64
+PLATFORMS=darwin linux
+ARCHITECTURES=386 amd64 arm
+GOARM=6
 
 # Setup linker flags option for build that interoperate with variable names in src code
-LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"
+LDFLAGS=-ldflags "-X cmd.Version=${VERSION} -X cmd.Build=${BUILD}"
 
 default: build
 
 all: clean build_all install
 
 build:
+	go get -v ./...
 	go build ${LDFLAGS} -o ${BINARY}
 
 build_all:
 	$(foreach GOOS, $(PLATFORMS),\
-	$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); go build -v -o $(BINARY)-$(GOOS)-$(GOARCH))))
+	$(foreach GOARCH, $(ARCHITECTURES), $(shell export GOOS=$(GOOS); export GOARCH=$(GOARCH); export GOARM=$(GOARM); go build -v -o $(BINARY)-$(GOOS)-$(GOARCH))))
 
 install:
 	go install ${LDFLAGS}
@@ -39,4 +41,4 @@ install:
 clean:
 	find ${ROOT_DIR} -name '${BINARY}[-?][a-zA-Z0-9]*[-?][a-zA-Z0-9]*' -delete
 
-.PHONY: check clean install build_all all
+.PHONY: check clean build_all all
