@@ -21,8 +21,11 @@
 package projectlib
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -60,4 +63,36 @@ func (node *Node) GetDockerClient(ctx context.Context, env Environment) (*client
 
 func (node *Node) getDockerHost() string {
 	return fmt.Sprintf("tcp://%s:2376", node.Host)
+}
+
+func scanAndPrint(reader io.Reader) (bool, error) {
+	scanner := bufio.NewScanner(reader)
+
+	foundError := false
+	for scanner.Scan() {
+		t := scanner.Text()
+		b := []byte(t)
+		var f interface{}
+		err := json.Unmarshal(b, &f)
+		if err != nil {
+			fmt.Println(t)
+		} else {
+			m := f.(map[string]interface{})
+			if status, ok := m["stream"]; ok {
+				fmt.Print(status)
+			} else if status, ok := m["status"]; ok {
+				fmt.Println(status)
+			} else if err, ok := m["errorDetail"]; ok {
+				foundError = true
+				log.Fatalf("Error during image build: %s", err)
+			} else {
+				fmt.Println(t)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return false, err
+	}
+	return foundError, nil
 }

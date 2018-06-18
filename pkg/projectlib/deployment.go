@@ -23,8 +23,6 @@ package projectlib
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -47,7 +45,7 @@ func (app *Application) Deploy(node Node, env Environment, lock RiotLock) (*Riot
 	if err != nil {
 		return nil, err
 	}
-	io.Copy(os.Stdout, out)
+	scanAndPrint(out)
 
 	containerID, ok := lock.GetDeployment(app.Name, node.Name)
 	if ok {

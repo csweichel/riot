@@ -23,7 +23,6 @@ package projectlib
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -78,7 +77,7 @@ func (app *Application) Build(env Environment) (string, error) {
 
 	imageVersion := xid.New().String()
 	imageName := env.GetRegistry().Host + "/" + app.Name + ":" + imageVersion
-	log.Printf("Building image %s\n", imageName)
+	log.Printf("Building image %s on %s\n", imageName, node.Name)
 
 	dockerBuildContext, err := os.Open(tarfile.Name())
 	defer dockerBuildContext.Close()
@@ -96,7 +95,7 @@ func (app *Application) Build(env Environment) (string, error) {
 		return "", err
 	}
 	defer buildResponse.Body.Close()
-	io.Copy(os.Stdout, buildResponse.Body)
+	scanAndPrint(buildResponse.Body)
 
 	if !app.BuildCfg.DontPush {
 		authString, err := env.GetRegistry().GetAuthString()
@@ -111,7 +110,7 @@ func (app *Application) Build(env Environment) (string, error) {
 			return "", err
 		}
 		defer pushResponse.Close()
-		io.Copy(os.Stdout, pushResponse)
+		scanAndPrint(pushResponse)
 	}
 
 	return imageName, nil
