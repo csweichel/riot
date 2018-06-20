@@ -31,8 +31,8 @@ import (
 
 // statusCmd represents the status command
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Displays the status of all applications and their deployment",
+	Use:   "status [app]",
+	Short: "Displays the status of applications and their deployment",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		basedir := getBaseDir(cmd)
@@ -60,11 +60,21 @@ var statusCmd = &cobra.Command{
 			hostAvailability[idx] = node.IsAvailable()
 		}
 
-		apps, err := env.GetApplications()
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
+		var apps []projectlib.Application
+        if len(args) > 0 {
+            app, err := env.GetApplication(args[0])
+            if err != nil {
+                log.Fatal(err)
+                return
+            }
+            apps = []projectlib.Application{app}
+        } else {
+            apps, err = env.GetApplications()
+            if err != nil {
+                log.Fatal("Error while loading application descriptions", err)
+                return
+            }
+        }
 		lock, err := projectlib.LoadLock(env.GetBaseDir())
 		if err != nil {
 			log.Fatal(err, ". Please run riot build.")

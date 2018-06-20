@@ -1,3 +1,4 @@
+[![Gitpod.io](https://img.shields.io/badge/gitpod.io-master-green.svg)](https://gitpod.io/github.com/32leaves/master)
 [![Build Status](https://travis-ci.org/32leaves/riot.svg?branch=master)](https://travis-ci.org/32leaves/riot)
 
 # riot

@@ -29,9 +29,9 @@ import (
 
 // buildCmd represents the build command
 var buildCmd = &cobra.Command{
-	Use:   "build",
-	Short: "Builds all applications of this project",
-	Long: `Builds all application docker images in this project and
+	Use:   "build [app]",
+	Short: "Builds applications of this project",
+	Long: `Builds all (or the given) application docker images in this project and
 pushes them to the main registry. After a successful build one can
 deploy either the latest images (the last build) or a previous build.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -43,11 +43,21 @@ deploy either the latest images (the last build) or a previous build.`,
 			return
 		}
 
-		apps, err := env.GetApplications()
-		if err != nil {
-			log.Fatal("Error while loading application descriptions: ", err)
-			return
-		}
+		var apps []projectlib.Application
+        if len(args) > 0 {
+            app, err := env.GetApplication(args[0])
+            if err != nil {
+                log.Fatal(err)
+                return
+            }
+            apps = []projectlib.Application{app}
+        } else {
+            apps, err = env.GetApplications()
+            if err != nil {
+                log.Fatal("Error while loading application descriptions", err)
+                return
+            }
+        }
 
 		appToImage := make(map[string]string)
 		for _, app := range apps {

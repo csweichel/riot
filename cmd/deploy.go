@@ -30,8 +30,8 @@ import (
 
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
-	Use:   "deploy",
-	Short: "Deploys all applications of this project",
+	Use:   "deploy [app]",
+	Short: "Deploys applications of this project",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		basedir := getBaseDir(cmd)
@@ -42,11 +42,21 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
-		apps, err := env.GetApplications()
-		if err != nil {
-			log.Fatal("Error while loading application descriptions", err)
-			return
-		}
+        var apps []projectlib.Application
+        if len(args) > 0 {
+            app, err := env.GetApplication(args[0])
+            if err != nil {
+                log.Fatal(err)
+                return
+            }
+            apps = []projectlib.Application{app}
+        } else {
+            apps, err = env.GetApplications()
+            if err != nil {
+                log.Fatal("Error while loading application descriptions", err)
+                return
+            }
+        }
 
 		lock, err := projectlib.LoadLock(env.GetBaseDir())
 		if err != nil {

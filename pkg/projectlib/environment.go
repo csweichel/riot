@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -34,6 +33,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"gopkg.in/yaml.v2"
+    "github.com/sahilm/fuzzy"
 )
 
 // Environment is the core configuration of a riot project
@@ -41,6 +41,7 @@ type Environment interface {
 	GetRegistry() RegistryCfg
 	GetNodes() []Node
 	GetApplications() ([]Application, error)
+    GetApplication(name string) (Application, error)
 	Validate() ([]Issue, error)
 	GetBaseDir() string
 	SelectNodes(selector string) ([]Node, error)
@@ -103,7 +104,6 @@ func (env *environment) GetApplications() ([]Application, error) {
 	result := make([]Application, len(matches))
 	for idx, fn := range matches {
 		appBasedir, _ := filepath.Split(fn)
-		log.Printf("Loading application %s\n", appBasedir)
 		app, err := LoadApp(appBasedir)
 		if err != nil {
 			return nil, err
@@ -112,6 +112,29 @@ func (env *environment) GetApplications() ([]Application, error) {
 		result[idx] = *app
 	}
 	return result, nil
+}
+
+func (env *environment) GetApplication(name string) (Application, error) {
+    applications, err := env.GetApplications()
+    if err != nil {
+        return Application{}, err
+    }
+
+    names := make([]string, 0)
+    for _, app := range applications {
+        if app.Name == name {
+            return app, nil
+        } else {
+            names = append(names, app.Name)
+        }
+    }
+
+    matches := fuzzy.Find(name, names)
+    if len(matches) > 0 {
+        return Application{}, fmt.Errorf("Application %s not found. Did you mean %s?", name, matches[0].Str)
+    } else {
+        return Application{}, fmt.Errorf("Application %s not found", name)
+    }
 }
 
 // LoadEnv loads the environment description of a riot project from the basedir
