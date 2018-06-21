@@ -42,21 +42,21 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
-        var apps []projectlib.Application
-        if len(args) > 0 {
-            app, err := env.GetApplication(args[0])
-            if err != nil {
-                log.Fatal(err)
-                return
-            }
-            apps = []projectlib.Application{app}
-        } else {
-            apps, err = env.GetApplications()
-            if err != nil {
-                log.Fatal("Error while loading application descriptions", err)
-                return
-            }
-        }
+		var apps []projectlib.Application
+		if len(args) > 0 {
+			app, err := env.GetApplication(args[0])
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			apps = []projectlib.Application{app}
+		} else {
+			apps, err = env.GetApplications()
+			if err != nil {
+				log.Fatal("Error while loading application descriptions", err)
+				return
+			}
+		}
 
 		lock, err := projectlib.LoadLock(env.GetBaseDir())
 		if err != nil {
@@ -73,6 +73,7 @@ var deployCmd = &cobra.Command{
 			}
 
 			for _, host := range hosts {
+				log.Printf("Deploying \"%s\" on \"%s\"\n", app.Name, host.Name)
 				plock, err := app.Deploy(host, env, lock)
 
 				if err != nil {

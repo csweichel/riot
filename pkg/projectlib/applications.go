@@ -51,8 +51,9 @@ type AppBuild struct {
 
 // AppRun configures an application during runtime
 type AppRun struct {
-	Volumes map[string]string `yaml:"volumes"`
-	Ports   map[string]string `yaml:"ports"`
+	Priviliged bool              `yaml:"priviliged"`
+	Volumes    map[string]string `yaml:"volumes"`
+	Ports      map[string]string `yaml:"ports"`
 }
 
 // LoadApp loads the application manifest from an application folder

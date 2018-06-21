@@ -32,8 +32,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/sahilm/fuzzy"
 	"gopkg.in/yaml.v2"
-    "github.com/sahilm/fuzzy"
 )
 
 // Environment is the core configuration of a riot project
@@ -41,10 +41,12 @@ type Environment interface {
 	GetRegistry() RegistryCfg
 	GetNodes() []Node
 	GetApplications() ([]Application, error)
-    GetApplication(name string) (Application, error)
+	GetApplication(name string) (Application, error)
 	Validate() ([]Issue, error)
 	GetBaseDir() string
 	SelectNodes(selector string) ([]Node, error)
+	AddNode(node Node)
+	Save() error
 }
 
 type environment struct {
@@ -115,26 +117,36 @@ func (env *environment) GetApplications() ([]Application, error) {
 }
 
 func (env *environment) GetApplication(name string) (Application, error) {
-    applications, err := env.GetApplications()
-    if err != nil {
-        return Application{}, err
-    }
+	applications, err := env.GetApplications()
+	if err != nil {
+		return Application{}, err
+	}
 
-    names := make([]string, 0)
-    for _, app := range applications {
-        if app.Name == name {
-            return app, nil
-        } else {
-            names = append(names, app.Name)
-        }
-    }
+	names := make([]string, 0)
+	for _, app := range applications {
+		if app.Name == name {
+			return app, nil
+		} else {
+			names = append(names, app.Name)
+		}
+	}
 
-    matches := fuzzy.Find(name, names)
-    if len(matches) > 0 {
-        return Application{}, fmt.Errorf("Application %s not found. Did you mean %s?", name, matches[0].Str)
-    } else {
-        return Application{}, fmt.Errorf("Application %s not found", name)
-    }
+	matches := fuzzy.Find(name, names)
+	if len(matches) > 0 {
+		return Application{}, fmt.Errorf("Application %s not found. Did you mean %s?", name, matches[0].Str)
+	} else {
+		return Application{}, fmt.Errorf("Application %s not found", name)
+	}
+}
+
+func (env *environment) Save() error {
+	data, err := yaml.Marshal(*env)
+	if err != nil {
+		return err
+	}
+
+	fn := filepath.Join(env.basedir, "environment.yaml")
+	return ioutil.WriteFile(fn, data, 0644)
 }
 
 // LoadEnv loads the environment description of a riot project from the basedir
@@ -193,4 +205,8 @@ func (env *environment) SelectNodes(selector string) ([]Node, error) {
 		}
 	}
 	return result, nil
+}
+
+func (env *environment) AddNode(node Node) {
+	env.Nodes = append(env.Nodes, node)
 }

@@ -56,28 +56,8 @@ nodes:
 	if err != nil {
 		return err
 	}
-	err = os.Mkdir(path.Join(basedir, "applications", "with-build"), os.ModePerm)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(path.Join(basedir, "applications", "with-build", "Dockerfile"), []byte(`
-FROM alpine
-CMD ["echo", "hello"]
-    `), 0644)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(path.Join(basedir, "applications", "with-build", "application.yaml"), []byte(`deploysTo:
-  - ".ble"
-build:
-  buildsOn: ".ble"
-  args:
-    foo: bar
-run:
-  ports:
-    8080: 8080
-  volumes:
-    /tmp/wbtmp: /tmp`), 0644)
+
+	err = CreateApplication(basedir, "with-build")
 	if err != nil {
 		return err
 	}
@@ -89,6 +69,37 @@ run:
 	err = ioutil.WriteFile(path.Join(basedir, "applications", "without-build", "application.yaml"), []byte(`deploysTo:
   - "#myFirstNode"
 image: alpine:3.7`), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateApplication creates a single application with a Dockerfile
+func CreateApplication(basedir string, name string) error {
+	err := os.Mkdir(path.Join(basedir, "applications", name), os.ModePerm)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(path.Join(basedir, "applications", name, "Dockerfile"), []byte(`
+FROM alpine
+CMD ["echo", "hello"]
+    `), 0644)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(path.Join(basedir, "applications", name, "application.yaml"), []byte(`deploysTo:
+  - ".ble"
+build:
+  buildsOn: ".ble"
+  args:
+    foo: bar
+run:
+  ports:
+    8080: 8080
+  volumes:
+    /tmp/wbtmp: /tmp`), 0644)
 	if err != nil {
 		return err
 	}

@@ -26,6 +26,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 )
 
 // Deploy installs an application on a node
@@ -55,9 +56,23 @@ func (app *Application) Deploy(node Node, env Environment, lock RiotLock) (*Riot
 		}
 	}
 
+	hostConfig := container.HostConfig{
+		Privileged: app.RunCfg.Priviliged,
+	}
+	if len(app.RunCfg.Volumes) > 0 {
+		mounts := make([]mount.Mount, 0)
+		for source, target := range app.RunCfg.Volumes {
+			mounts = append(mounts, mount.Mount{
+				Source: source,
+				Target: target,
+			})
+		}
+		hostConfig.Mounts = mounts
+	}
+
 	resp, err := client.ContainerCreate(ctx, &container.Config{
 		Image: imageName,
-	}, nil, nil, "")
+	}, &hostConfig, nil, "")
 	if err != nil {
 		return nil, err
 	}
