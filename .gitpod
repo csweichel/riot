@@ -1,4 +1,4 @@
-checkoutLocation: "go/src/github.com/32leaves/riot"
-workspaceLocation: "go/src"
+checkoutLocation: "src/github.com/32leaves/riot"
+workspaceLocation: "src"
 tasks:
-  - command: "export GOPATH=/workspace/go && cd $GOPATH/src/github.com/32leaves/riot && go get -v ./..."
+  - command: "export GOPATH=/workspace && cd $GOPATH/src/github.com/32leaves/riot && go get -v ./..."
